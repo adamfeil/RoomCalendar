@@ -1,0 +1,164 @@
+﻿@model List<Ical.Net.CalendarComponents.CalendarEvent>
+
+
+
+
+<div id="app" style="display:none;">
+    <h1>{{roomName}}</h1>
+   <div class="row time-bar">
+       <div class="col-md-3">
+           <h2>{{niceTime(currentTime)}}</h2>
+          
+       </div>
+       <div class="col-md-4"> <h4>{{niceDate(currentTime)}}</h4></div>
+   </div>
+
+    
+    <div v-if="roomIsFree">
+        <div class="free-room">
+            <h2>Room is Free</h2>
+            <p>
+                Next meeting in {{nextBookedTime}}
+            </p>
+        </div>
+        
+    </div>
+
+    <div v-if="!roomIsFree">
+        <div class="booked-room">
+
+            <h2>Room is Booked</h2>
+        </div>
+        
+    </div>
+
+    <div class="event" v-for="event in events">
+        <h3> {{event.summary}}</h3>
+        <h5>{{niceDate(event.begin)}}</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <div><p>Begins</p></div>
+                <div>
+                    <h4>{{niceTime(event.begin)}}</h4>
+                </div>
+            </div>
+
+
+            <div class="col-md-6">
+                <div><p>Ends</p></div>
+                <div>
+                    <h4>{{niceTime(event.end)}}</h4>
+                </div>
+            </div>
+        </div>
+
+       
+        <p class="organizer">{{event.organizer}}</p> 
+    </div>
+
+
+</div>
+
+
+
+@section scripts{
+
+<script src="~/Scripts/moment.js"></script>
+<script src="~/Scripts/vue.js"></script>
+
+
+    <script>
+
+        var rooms = {
+
+            funQuad: {
+                displayName: "Fun Quad Meeting Table",
+                calendarURL: "YOUR ICAL URL HERE"
+
+            },
+            meetingRoom: {
+                displayName: "HQ Meeting Room",
+                calendarURL: "YOUR ICAL URL HERE"
+
+            }
+
+        }
+
+        var roomID = new URLSearchParams(window.location.search).get("roomID");
+
+        var room = rooms[roomID];
+
+        var app = new Vue({
+
+            el: "#app",
+            data: {
+                roomName: room.displayName,
+                currentTime: new Date(),
+                events: [{
+                    summary:"hi there"
+
+                }]
+            },
+            methods: {
+                updateTime: function (newTime) {
+                    this.currentTime = newTime;
+                },
+                niceTime: function (dateString) {
+                    return moment(dateString).format("h:mm a");
+
+                },
+                niceDate: function (dateString) {
+
+                    return moment(dateString).format("MMMM Do YYYY");
+                },
+                getData: function () {
+                    var self = this;
+                    var data = $.ajax({
+                        url: "../api/CalData/getEvents?calendarURL=" + room.calendarURL
+                        
+
+                    }).done(function (data) {
+                        self.events = data;
+                        $("#app").show();
+
+                    });
+                }
+            },
+            computed: {
+                nextBookedTime: function () {
+                    return moment(this.events[0].begin).fromNow();
+
+                },
+                roomIsFree: function () {
+
+                    var now = new Date().getTime();
+
+                    for (var i = 0; i < this.events.length; i++) {
+                        var begin = new Date(this.events[i].begin).getTime();
+                        var end = new Date(this.events[i].end).getTime();
+
+                        if (begin <= now && now <= end) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }
+            }
+        });
+
+        app.getData();
+        
+        function update() {
+
+            app.getData();
+            app.updateTime(new Date());
+
+        }
+
+        setInterval(update, 10000);
+
+    </script>
+
+}
+
